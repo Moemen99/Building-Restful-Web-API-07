@@ -175,3 +175,180 @@ public Poll? Get(int id) => _polls.SingleOrDefault(p => p.Id == id);
 ---
 
 **Note**: Consider moving to a proper database instead of in-memory List when moving to production.
+
+
+# Creating New Poll Endpoint Implementation
+
+## Complete Implementation
+
+```csharp
+public interface IPollService
+{
+    // Existing methods
+    IEnumerable<Poll> GetAll();
+    Poll? Get(int id);
+    
+    // New method
+    Poll Add(Poll poll);
+}
+
+public class PollService : IPollService
+{
+    private static readonly List<Poll> _polls = [
+        new Poll { Id = 1, Title = "Poll 1", Description = "My First Poll" }
+    ];
+
+    public Poll Add(Poll poll)
+    {
+        poll.Id = _polls.Count + 1;  // Temporary ID generation
+        _polls.Add(poll);
+        return poll;
+    }
+}
+
+public class PollsController : ControllerBase
+{
+    private readonly IPollService _pollService;
+
+    public PollsController(IPollService pollService)
+    {
+        _pollService = pollService;
+    }
+
+    [HttpPost]
+    public IActionResult Add(Poll request)
+    {
+        var newPoll = _pollService.Add(request);
+        return CreatedAtAction(
+            nameof(Get),           // Action name
+            new { id = newPoll.Id },  // Route values
+            newPoll                   // Response body
+        );
+    }
+}
+```
+
+## Response Comparison
+
+```mermaid
+graph TD
+    A[Add Poll Request] --> B{Response Types}
+    B --> C[Ok Response]
+    B --> D[CreatedAtAction Response]
+    
+    C --> E[Status: 200 OK]
+    C --> F[No Location Header]
+    
+    D --> G[Status: 201 Created]
+    D --> H[Location Header]
+    D --> I[Response Body]
+```
+
+## Response Options Comparison
+
+| Method | Status Code | Location Header | Best For |
+|--------|-------------|-----------------|----------|
+| `Ok(newPoll)` | 200 | No | Simple responses |
+| `Created(uri, newPoll)` | 201 | Yes (manual) | Custom URIs |
+| `CreatedAtAction(...)` | 201 | Yes (automatic) | REST compliance |
+
+## CreatedAtAction Overloads
+
+```csharp
+// 1. Basic
+CreatedAtAction("Get", newPoll)
+
+// 2. With Route Values
+CreatedAtAction("Get", new { id = newPoll.Id }, newPoll)
+
+// 3. With Controller Name
+CreatedAtAction("Get", "Polls", new { id = newPoll.Id }, newPoll)
+```
+
+## Response Headers
+
+### Using Ok()
+```http
+Status: 200 OK
+Content-Type: application/json
+Date: [timestamp]
+Server: [server-info]
+```
+
+### Using CreatedAtAction()
+```http
+Status: 201 Created
+Content-Type: application/json
+Location: https://api/polls/{id}
+Date: [timestamp]
+Server: [server-info]
+```
+
+## Best Practices
+
+1. **Use CreatedAtAction**
+```csharp
+return CreatedAtAction(
+    nameof(Get),  // Use nameof for refactoring support
+    new { id = newPoll.Id },
+    newPoll
+);
+```
+
+2. **ID Generation**
+```csharp
+// Temporary solution for in-memory storage
+poll.Id = _polls.Count + 1;
+
+// TODO: Replace with database-generated ID
+```
+
+3. **Static List Warning**
+```csharp
+// Note: Static list is temporary
+private static readonly List<Poll> _polls = [...];
+```
+
+## Implementation Notes
+
+### Controller
+- Uses POST verb
+- Accepts Poll object in request body
+- Returns 201 Created status
+- Includes Location header
+
+### Service
+- Handles ID generation (temporary)
+- Adds poll to collection
+- Returns created poll
+
+## Common Pitfalls
+
+1. **Returning Wrong Status**
+```csharp
+// Avoid
+return Ok(newPoll);  // 200 OK
+
+// Prefer
+return CreatedAtAction(...);  // 201 Created
+```
+
+2. **Missing Location Header**
+```csharp
+// Avoid
+return Created("", newPoll);  // Empty URI
+
+// Prefer
+return CreatedAtAction(nameof(Get), ...);  // Full URI
+```
+
+## Next Steps
+- Add input validation
+- Implement proper ID generation
+- Add error handling
+- Add duplicate checking
+- Implement database storage
+
+---
+
+**Note**: The current ID generation method is temporary and should be replaced with proper database-generated IDs in production.
