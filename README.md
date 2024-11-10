@@ -533,3 +533,190 @@ currentPoll.Description = poll.Description;
 ---
 
 **Note**: In a production environment, consider adding validation, logging, and proper error handling for edge cases.
+
+
+
+# Delete Endpoint Implementation
+
+## Complete Implementation
+
+```csharp
+public interface IPollService
+{
+    // Existing methods
+    IEnumerable<Poll> GetAll();
+    Poll? Get(int id);
+    Poll Add(Poll poll);
+    bool Update(int id, Poll poll);
+    
+    // New method
+    bool Delete(int id);
+}
+
+public class PollService : IPollService
+{
+    private static readonly List<Poll> _polls = [...];
+
+    public bool Delete(int id)
+    {
+        var poll = Get(id);
+        if (poll is null)
+            return false;
+            
+        _polls.Remove(poll);
+        return true;
+    }
+}
+
+public class PollsController : ControllerBase
+{
+    private readonly IPollService _pollService;
+
+    [HttpDelete("{id}")]
+    public IActionResult Delete(int id)
+    {
+        var isDeleted = _pollService.Delete(id);
+        return isDeleted ? NoContent() : NotFound();
+    }
+}
+```
+
+## Flow Diagram
+```mermaid
+graph TD
+    A[DELETE Request] -->|id| B[Controller]
+    B -->|Delete Call| C[Service]
+    C -->|Find Poll| D{Poll Exists?}
+    D -->|No| E[Return false]
+    D -->|Yes| F[Remove Poll]
+    F --> G[Return true]
+    E -->|Controller| H[404 Not Found]
+    G -->|Controller| I[204 No Content]
+```
+
+## Response Status Codes
+
+| Status Code | Scenario | Response Body | Description |
+|------------|----------|---------------|-------------|
+| 204 | Success | Empty | Resource successfully deleted |
+| 404 | Not Found | Empty | Resource doesn't exist |
+
+## Method Signatures
+
+### Controller Layer
+```csharp
+[HttpDelete("{id}")]
+public IActionResult Delete(int id)
+```
+
+### Service Layer
+```csharp
+// Interface
+bool Delete(int id);
+
+// Implementation
+public bool Delete(int id)
+```
+
+## Implementation Details
+
+### 1. Controller Implementation
+```csharp
+[HttpDelete("{id}")]
+public IActionResult Delete(int id)
+{
+    var isDeleted = _pollService.Delete(id);
+    return isDeleted ? NoContent() : NotFound();
+}
+```
+
+### 2. Service Implementation
+```csharp
+public bool Delete(int id)
+{
+    var poll = Get(id);
+    if (poll is null)
+        return false;
+        
+    _polls.Remove(poll);
+    return true;
+}
+```
+
+## Best Practices
+
+1. **Status Codes**
+   ```csharp
+   // Success
+   return NoContent();  // 204
+
+   // Not Found
+   return NotFound();   // 404
+   ```
+
+2. **Service Response**
+   ```csharp
+   // Boolean for operation success/failure
+   bool Delete(int id)
+   ```
+
+3. **Null Checking**
+   ```csharp
+   if (poll is null)
+       return false;
+   ```
+
+## Common Patterns
+
+### Ternary Response
+```csharp
+return isDeleted ? NoContent() : NotFound();
+```
+
+### Entity Removal
+```csharp
+_polls.Remove(poll);
+```
+
+## DELETE Operation Steps
+
+1. **Receive Request**
+   - Get ID from route parameter
+
+2. **Find Resource**
+   - Use existing Get method
+
+3. **Remove Resource**
+   - Remove from collection if found
+
+4. **Return Response**
+   - 204 if successful
+   - 404 if not found
+
+## Validation Checks
+
+| Check | Action | Result |
+|-------|--------|--------|
+| Invalid ID | Return false | 404 Response |
+| Poll not found | Return false | 404 Response |
+| Successful deletion | Return true | 204 Response |
+
+## Next Steps
+- Add soft delete
+- Implement deletion logging
+- Add authorization checks
+- Handle cascade deletes
+- Add recovery options
+
+## Common Issues and Solutions
+
+| Issue | Solution |
+|-------|----------|
+| Cascade Deletion | Implement related data handling |
+| Audit Trail | Add deletion logging |
+| Recovery | Implement soft delete |
+| Authorization | Add permission checks |
+
+---
+
+**Note**: In a production environment, consider implementing soft delete instead of hard delete, and ensure proper authorization before deletion.
