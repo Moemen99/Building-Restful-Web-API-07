@@ -352,3 +352,184 @@ return CreatedAtAction(nameof(Get), ...);  // Full URI
 ---
 
 **Note**: The current ID generation method is temporary and should be replaced with proper database-generated IDs in production.
+
+
+# Update Endpoint Implementation
+
+## Complete Implementation
+
+```csharp
+public interface IPollService
+{
+    // Existing methods
+    IEnumerable<Poll> GetAll();
+    Poll? Get(int id);
+    Poll Add(Poll poll);
+    
+    // New method
+    bool Update(int id, Poll poll);
+}
+
+public class PollService : IPollService
+{
+    public bool Update(int id, Poll poll)
+    {
+        var currentPoll = Get(id);
+        if (currentPoll is null)
+            return false;
+            
+        currentPoll.Title = poll.Title;
+        currentPoll.Description = poll.Description;
+        return true;
+    }
+}
+
+public class PollsController : ControllerBase
+{
+    private readonly IPollService _pollService;
+
+    [HttpPut("{id}")]
+    public IActionResult Update(int id, Poll request)
+    {
+        var isUpdated = _pollService.Update(id, request);
+        return isUpdated ? NoContent() : NotFound();
+    }
+}
+```
+
+## Flow Diagram
+```mermaid
+graph TD
+    A[PUT Request] -->|id + Poll| B[Controller]
+    B -->|Update Call| C[Service]
+    C -->|Find Poll| D{Poll Exists?}
+    D -->|No| E[Return false]
+    D -->|Yes| F[Update Properties]
+    F --> G[Return true]
+    E -->|Controller| H[404 Not Found]
+    G -->|Controller| I[204 No Content]
+```
+
+## Response Status Codes
+
+| Scenario | Status Code | Description | Response Body |
+|----------|-------------|-------------|---------------|
+| Success | 204 | No Content | Empty |
+| Not Found | 404 | Not Found | Empty |
+
+## Method Signatures
+
+### Controller
+```csharp
+[HttpPut("{id}")]
+public IActionResult Update(int id, Poll request)
+```
+
+### Service Interface
+```csharp
+bool Update(int id, Poll poll)
+```
+
+### Service Implementation
+```csharp
+public bool Update(int id, Poll poll)
+{
+    var currentPoll = Get(id);
+    if (currentPoll is null)
+        return false;
+        
+    currentPoll.Title = poll.Title;
+    currentPoll.Description = poll.Description;
+    return true;
+}
+```
+
+## Update Process Steps
+
+1. **Request Handling**
+   ```csharp
+   [HttpPut("{id}")]
+   public IActionResult Update(int id, Poll request)
+   ```
+
+2. **Service Call**
+   ```csharp
+   var isUpdated = _pollService.Update(id, request);
+   ```
+
+3. **Response Generation**
+   ```csharp
+   return isUpdated ? NoContent() : NotFound();
+   ```
+
+## Best Practices
+
+1. **Return Types**
+   ```csharp
+   // Service: Boolean for success/failure
+   bool Update(int id, Poll poll)
+
+   // Controller: IActionResult for HTTP responses
+   IActionResult Update(int id, Poll request)
+   ```
+
+2. **Response Codes**
+   ```csharp
+   // Success: 204 No Content
+   return NoContent();
+
+   // Not Found: 404
+   return NotFound();
+   ```
+
+3. **Null Checking**
+   ```csharp
+   if (currentPoll is null)
+       return false;
+   ```
+
+## Implementation Notes
+
+### Service Layer
+- Uses existing Get method for finding poll
+- Returns boolean for operation result
+- Updates properties directly
+
+### Controller Layer
+- Uses PUT HTTP method
+- Accepts ID from route
+- Accepts Poll from request body
+- Returns appropriate status codes
+
+## Common Patterns
+
+### Ternary Response
+```csharp
+// Concise way to return response
+return isUpdated ? NoContent() : NotFound();
+```
+
+### Property Update
+```csharp
+currentPoll.Title = poll.Title;
+currentPoll.Description = poll.Description;
+```
+
+## Next Steps
+- Add validation
+- Implement concurrency checking
+- Add partial updates (PATCH)
+- Add audit trails
+- Implement error logging
+
+## Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| Concurrent Updates | Implement optimistic concurrency |
+| Partial Updates | Consider using HTTP PATCH |
+| Data Validation | Add request validation |
+
+---
+
+**Note**: In a production environment, consider adding validation, logging, and proper error handling for edge cases.
