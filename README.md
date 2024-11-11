@@ -720,3 +720,138 @@ _polls.Remove(poll);
 ---
 
 **Note**: In a production environment, consider implementing soft delete instead of hard delete, and ensure proper authorization before deletion.
+
+
+
+# API Request/Response Flow Documentation
+
+## Current Implementation Flow
+
+```mermaid
+graph LR
+    A[Client] -->|HTTP Request| B[Controller]
+    B -->|Data Operations| C[Data Source]
+    C -->|Domain Model| D[Controller]
+    D -->|Serialization| E[JSON/XML]
+    E -->|HTTP Response| A
+```
+
+## Current Implementation Status
+
+### Completed Features
+1. Basic CRUD Operations
+   - GetAll
+   - Get by ID
+   - Add
+   - Update
+   - Delete
+
+2. In-Memory Data Storage
+   ```csharp
+   private static readonly List<Poll> _polls = new();
+   ```
+
+3. Service Layer Pattern
+   ```csharp
+   public interface IPollService
+   {
+       IEnumerable<Poll> GetAll();
+       Poll? Get(int id);
+       Poll Add(Poll poll);
+       bool Update(int id, Poll poll);
+       bool Delete(int id);
+   }
+   ```
+
+## Git Version Control
+
+### Commit Process
+1. Open Git Changes
+2. Review modified files
+3. Add commit message:
+   ```
+   Add CRUD Operations to polls controller
+   ```
+4. Commit All
+5. Push changes
+
+## Areas for Improvement
+
+| Area | Current State | Future Improvement |
+|------|--------------|-------------------|
+| Data Storage | In-memory List | SQL Database |
+| Model Binding | Basic | Enhanced validation |
+| Domain Models | Direct usage | DTOs/ViewModels |
+| Validation | None | Client/Server validation |
+
+## Request/Response Flow Details
+
+### 1. Client Request
+- HTTP method (GET, POST, PUT, DELETE)
+- URL endpoint
+- Optional body data
+- Headers
+
+### 2. Controller Processing
+```csharp
+[HttpGet]
+public IActionResult GetAll()
+{
+    var result = _pollService.GetAll();
+    return Ok(result);
+}
+```
+
+### 3. Data Operations
+- CRUD operations via service layer
+- Currently using in-memory list
+- Future: Database operations
+
+### 4. Response Types
+| Operation | Response Type | Status Code |
+|-----------|--------------|-------------|
+| Get | Data + 200 | OK |
+| Create | Data + 201 | Created |
+| Update | 204 | No Content |
+| Delete | 204 | No Content |
+
+### 5. Serialization
+- JSON by default
+- Content negotiation available
+- Response formatting
+
+## Next Steps
+
+1. **Database Integration**
+   - Replace in-memory storage
+   - Add proper data context
+   - Implement repositories
+
+2. **Model Improvements**
+   ```csharp
+   public class PollDto
+   {
+       // Separate from domain model
+   }
+   ```
+
+3. **Validation**
+   ```csharp
+   public class PollValidator
+   {
+       // Add validation rules
+   }
+   ```
+
+4. **Model Binding**
+   ```csharp
+   [ApiController]
+   public class PollsController
+   {
+       // Enhanced model binding
+   }
+   ```
+
+---
+
+**Note**: The current implementation provides basic CRUD functionality but needs enhancements for production use, particularly in areas of data persistence, validation, and model separation.
